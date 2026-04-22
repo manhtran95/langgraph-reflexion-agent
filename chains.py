@@ -12,10 +12,13 @@ from langchain_core.output_parsers.openai_tools import (
 from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
+# from langchain_ollama import ChatOllama
 
 from schemas import AnswerQuestion, ReviseAnswer
 
 llm = ChatOpenAI(model="o4-mini")
+# llm = ChatOllama(model="llama3.1:8b")
+# llm = ChatOllama(model="gpt-oss:20b-cloud")
 parser = JsonOutputToolsParser(return_id=True)
 parser_pydantic = PydanticToolsParser(tools=[AnswerQuestion])
 
@@ -28,7 +31,7 @@ actor_prompt_template = ChatPromptTemplate.from_messages(
 
             1. {first_instruction}
             2. Reflect and critique your answer. Be severe to maximize improvement.
-            3. Recommend search queries to research information and improve your answer.""",
+            3. Recommend 3 search queries to research information and improve your answer.""",
         ),
         MessagesPlaceholder(variable_name="messages"),
         ("system", "Answer the user's question above using the required format."),
@@ -45,6 +48,8 @@ first_responder_prompt_template = actor_prompt_template.partial(
 first_responder = first_responder_prompt_template | llm.bind_tools(
     tools=[AnswerQuestion], tool_choice="AnswerQuestion"
 )
+
+
 
 revise_instructions = """Revise your previous answer using the new information.
     - You should use the previous critique to add important information to your answer.
