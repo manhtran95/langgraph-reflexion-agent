@@ -29,9 +29,12 @@ actor_prompt_template = ChatPromptTemplate.from_messages(
             """You are expert researcher.
             Current time: {time}
 
-            1. {first_instruction}
-            2. Reflect and critique your answer. Be severe to maximize improvement.
-            3. Recommend 3 search queries to research information and improve your answer.""",
+            *Your job*
+            - Update the AnswerQuestion fields: *answer*, *reflection*, *search_queries*.
+
+            1. *answer* field: Provide a detailed ~250 word answer.
+            2. *reflection* field: Reflect and critique your answer.
+            3. *search_queries* field: Recommend 2 or 3 search queries to research information and improve your answer.""",
         ),
         MessagesPlaceholder(variable_name="messages"),
         ("system", "Answer the user's question above using the required format."),
@@ -40,38 +43,50 @@ actor_prompt_template = ChatPromptTemplate.from_messages(
     time=lambda: datetime.datetime.now().isoformat(),
 )
 
-
-first_responder_prompt_template = actor_prompt_template.partial(
-    first_instruction="Provide a detailed ~250 word answer."
-)
-
-first_responder = first_responder_prompt_template | llm.bind_tools(
+first_responder = actor_prompt_template | llm.bind_tools(
     tools=[AnswerQuestion], tool_choice="AnswerQuestion"
 )
 
+# Revisor
 
+revisor_prompt_template = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """You are expert researcher.
+            Current time: {time}
 
-revise_instructions = """Revise your previous answer using the new information.
-    - You should use the previous critique to add important information to your answer.
-        - You MUST include numerical citations in your revised answer to ensure it can be verified.
-        - Add a "References" section to the bottom of your answer (which does not count towards the word limit). In form of:
-            - [1] https://example.com
-            - [2] https://example.com
-    - You should use the previous critique to remove superfluous information from your answer and make SURE it is not more than 250 words.
-"""
+            *Your job*
+            - Revise your previous answer using the new information.
+            - Update following fields of the ReviseAnswer schema:
 
-revisor = actor_prompt_template.partial(
-    first_instruction=revise_instructions
-) | llm.bind_tools(tools=[ReviseAnswer], tool_choice="ReviseAnswer")
+            1. *answer* field
+            - You should use the previous critique to update information to your answer.
+            - You should use the previous critique to remove superfluous information from your answer and make SURE it is not more than 250 words.
+            2. *references* field
+            - Include numerical citations if you know something from urls from previous tool result. Do NOT make up urls. Create a mapping from a number (starting from 1) to some url.
+            - Update *references* field of the ReviseAnswer schema with the list of urls.
+            Each reference item should be a string in the form of: "[<number>] <url>".            
+            3. *reflection* field: Reflect and critique your answer.
+            4. *search_queries* field: Recommend 2 or 3 search queries to research information and improve your answer.""",
+        ),
+        MessagesPlaceholder(variable_name="messages"),
+        ("system", "Answer the user's question above using the required format."),
+    ]
+).partial(
+    time=lambda: datetime.datetime.now().isoformat(),
+)
+
+revisor = revisor_prompt_template | llm.bind_tools(tools=[ReviseAnswer], tool_choice="ReviseAnswer")
 
 
 if __name__ == "__main__":
     human_message = HumanMessage(
-        content="Write about AI-Powered SOC / autonomous soc  problem domain,"
+        content="Write about LLM domain,"
         " list startups that do that and raised capital."
     )
     chain = (
-        first_responder_prompt_template
+        actor_prompt_template
         | llm.with_structured_output(AnswerQuestion)
     )
 

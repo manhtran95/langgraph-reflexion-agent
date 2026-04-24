@@ -51,7 +51,7 @@ res = graph.invoke(
         "messages": [
             {
                 "role": "user",
-                "content": "Write about LLM domain, list startups that do that and raised capital.",
+                "content": "Write about LLM domain. List startups that do that and raised capital.",
             }
         ]
     }
@@ -60,4 +60,4 @@ res = graph.invoke(
 last_message = res["messages"][-1]
 if isinstance(last_message, AIMessage) and last_message.tool_calls:
     print(last_message.tool_calls[0]["args"]["answer"])
-print(res)
+# print(res)

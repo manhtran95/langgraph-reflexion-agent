@@ -8,7 +8,7 @@ from langgraph.prebuilt import ToolNode
 
 from schemas import AnswerQuestion, ReviseAnswer
 
-tavily_tool = TavilySearch(max_results=3)
+tavily_tool = TavilySearch(max_results=2)
 
 
 def run_queries(search_queries: list[str], **kwargs):
